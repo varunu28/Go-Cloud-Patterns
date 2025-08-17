@@ -17,16 +17,19 @@ func DebounceFirst(circuit Circuit, d time.Duration) Circuit {
 
 	return func(ctx context.Context) (string, error) {
 		m.Lock()
-		defer m.Unlock()
+
+		defer func() {
+			threshold = time.Now().Add(d)
+			m.Unlock()
+		}()
 
 		// If the threshold has not been reached, return the previous result
-		if !threshold.IsZero() && time.Now().Before(threshold) {
+		if time.Now().Before(threshold) {
 			return result, err
 		}
 
 		// Execute the circuit and set the threshold for future calls
 		result, err = circuit(ctx)
-		threshold = time.Now().Add(d)
 
 		return result, err
 	}
