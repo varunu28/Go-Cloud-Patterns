@@ -34,16 +34,17 @@ func httpCircuit(ctx context.Context) (string, error) {
 func main() {
 	circuitBreakerRequest := circuitbreaker.Breaker(httpCircuit, 3)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	debounceLast := circuitbreaker.DebounceFirst(circuitBreakerRequest, 1*time.Second)
+
 	for i := 0; i < 10; i++ {
-		response, err := circuitBreakerRequest(ctx)
+		response, err := debounceLast(ctx)
 		if err != nil {
 			fmt.Printf("Attempt %d failed: %v\n", i+1, err)
 		} else {
 			fmt.Printf("Attempt %d succeeded: %s\n", i+1, response)
-			break
 		}
 
 		time.Sleep(time.Second)
