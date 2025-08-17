@@ -4,49 +4,26 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	circuitbreaker "go-cloud-patterns/circuit-breaker"
-	"io"
-	"net/http"
+	"go-cloud-patterns/retry"
 	"time"
 )
 
-// An implementation of Circuit interface which invokes an endpoint that always returns an error
-func httpCircuit(ctx context.Context) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", "https://localhost:8081/api/v1/verify", nil)
-	if err != nil {
-		return "", err
+var count int
+
+func EmulateTransientError(ctx context.Context) (string, error) {
+	count++
+
+	if count < 3 {
+		return "intentional failure", errors.New("error")
 	}
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", errors.New("bad response from sever")
-	}
-
-	body, _ := io.ReadAll(resp.Body)
-	return string(body), nil
+	return "success", nil
 }
 
 func main() {
-	circuitBreakerRequest := circuitbreaker.Breaker(httpCircuit, 3)
+	r := retry.Retry(EmulateTransientError, 5, 1*time.Second)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	res, err := r(context.Background())
 
-	debounceLast := circuitbreaker.DebounceFirst(circuitBreakerRequest, 1*time.Second)
-
-	for i := 0; i < 10; i++ {
-		response, err := debounceLast(ctx)
-		if err != nil {
-			fmt.Printf("Attempt %d failed: %v\n", i+1, err)
-		} else {
-			fmt.Printf("Attempt %d succeeded: %s\n", i+1, response)
-		}
-
-		time.Sleep(time.Second)
-	}
+	fmt.Println(res, err)
 }
