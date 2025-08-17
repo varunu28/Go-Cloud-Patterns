@@ -3,6 +3,7 @@ package circuitbreaker
 import (
 	"context"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 )
@@ -61,8 +62,11 @@ func TestDebounceFirst(t *testing.T) {
 
 func TestDebounceLast(t *testing.T) {
 	var executionCount int
+	var mu sync.Mutex
 	circuit := func(ctx context.Context) (string, error) {
+		mu.Lock()
 		executionCount++
+		mu.Unlock()
 		return strconv.FormatInt(time.Now().UnixMilli(), 10), nil
 	}
 
@@ -81,16 +85,22 @@ func TestDebounceLast(t *testing.T) {
 	}
 
 	// Verify that the circuit has not executed yet
-	if executionCount != 0 {
-		t.Errorf("Expected circuit to not execute yet, executed %d times", executionCount)
+	mu.Lock()
+	count := executionCount
+	mu.Unlock()
+	if count != 0 {
+		t.Errorf("Expected circuit to not execute yet, executed %d times", count)
 	}
 
 	// Wait for the debounce period to pass
 	time.Sleep(300 * time.Millisecond)
 
 	// Now the circuit should execute
-	if executionCount != 1 {
-		t.Errorf("Expected circuit to execute once after debounce period, executed %d times", executionCount)
+	mu.Lock()
+	count = executionCount
+	mu.Unlock()
+	if count != 1 {
+		t.Errorf("Expected circuit to execute once after debounce period, executed %d times", count)
 	}
 
 	// Now all calls should return the result of the last execution
@@ -105,8 +115,11 @@ func TestDebounceLast(t *testing.T) {
 
 func TestDebounceLast_ContextCancellation(t *testing.T) {
 	var executionCount int
+	var mu sync.Mutex
 	circuit := func(ctx context.Context) (string, error) {
+		mu.Lock()
 		executionCount++
+		mu.Unlock()
 		select {
 		case <-ctx.Done():
 			return "", ctx.Err()
@@ -139,7 +152,10 @@ func TestDebounceLast_ContextCancellation(t *testing.T) {
 	}
 
 	// Verify that the circuit has not executed yet
-	if executionCount != 0 {
-		t.Errorf("Expected circuit to not execute yet, executed %d times", executionCount)
+	mu.Lock()
+	count := executionCount
+	mu.Unlock()
+	if count != 0 {
+		t.Errorf("Expected circuit to not execute yet, executed %d times", count)
 	}
 }
