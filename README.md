@@ -6,3 +6,4 @@ A repository consisting of implementation for cloud patterns in Go
 - Debounce [Checkpoint commit](https://github.com/varunu28/Go-Cloud-Patterns/tree/e723f38d68af11e763c9b0f576df734190749f61/circuit-breaker)
 - Retry [Checkpoint commit](https://github.com/varunu28/Go-Cloud-Patterns/tree/753eb237d3830de3d859958e7ce3e27a5d776dc7/retry)
 - Throttle [Checkpoint commit](https://github.com/varunu28/Go-Cloud-Patterns/tree/f3c9f52e161fb9fbe57d3753e00947967c9623cf/throttle)
+- Timeout [Checkpoint commit]()
